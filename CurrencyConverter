@@ -1,0 +1,85 @@
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+
+public class CurrencyConverter {
+    private static final String API_KEY = "YOUR_EXCHANGE_RATE_API_KEY";
+    private static final String API_URL = "https://open.er-api.com/v6/latest/";
+
+    public static void main(String[] args) {
+        // Step 1: Allow the user to choose the base and target currencies
+        String baseCurrency = getUserInput("Enter the base currency code (e.g., USD): ").toUpperCase();
+        String targetCurrency = getUserInput("Enter the target currency code (e.g., EUR): ").toUpperCase();
+
+        // Step 2: Fetch real-time exchange rates
+        double exchangeRate = getExchangeRate(baseCurrency, targetCurrency);
+
+        if (exchangeRate == -1) {
+            System.out.println("Failed to fetch exchange rates. Exiting...");
+            return;
+        }
+
+        // Step 3: Take input from the user for the amount to convert
+        double amountToConvert = getDoubleUserInput("Enter the amount to convert: ");
+
+        // Step 4: Convert the input amount
+        double convertedAmount = amountToConvert * exchangeRate;
+
+        // Step 5: Display the result
+        System.out.printf("%.2f %s is equal to %.2f %s%n", amountToConvert, baseCurrency, convertedAmount, targetCurrency);
+    }
+
+    private static String getUserInput(String prompt) {
+        System.out.print(prompt);
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+
+        try {
+            return reader.readLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return "";
+        }
+    }
+
+    private static double getDoubleUserInput(String prompt) {
+        while (true) {
+            try {
+                String input = getUserInput(prompt);
+                return Double.parseDouble(input);
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid input. Please enter a valid number.");
+            }
+        }
+    }
+
+    private static double getExchangeRate(String baseCurrency, String targetCurrency) {
+        try {
+            URL url = new URL(API_URL + baseCurrency);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+
+            connection.setRequestMethod("GET");
+            connection.setRequestProperty("Accept", "application/json");
+
+            if (connection.getResponseCode() != 200) {
+                System.out.println("Failed to fetch exchange rates. HTTP error code: " + connection.getResponseCode());
+                return -1;
+            }
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+            String jsonResponse = reader.readLine();
+
+            // Parse JSON response to get the exchange rate
+            // Note: You may want to use a JSON library for parsing in a real-world scenario.
+            double exchangeRate = Double.parseDouble(jsonResponse.split("\"" + targetCurrency + "\":")[1].split(",")[0]);
+
+            connection.disconnect();
+            return exchangeRate;
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            return -1;
+        }
+    }
+}
